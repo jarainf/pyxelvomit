@@ -10,6 +10,7 @@ import time
 width = 1280
 height = 800
 bpp = 4
+fb_dev = '/dev/fb0'
 
 vbuffer = np.zeros(width * height * bpp, dtype=np.uint8)
 
@@ -36,7 +37,7 @@ def handle_client(connection, address):
         for data in handle_buffer(connection):
             if not data:
                 break
-
+            
             data_split = data.split()
 
             if data_split[0] == 'OFFSET':
@@ -66,7 +67,7 @@ def write_vbuffer(fb, scheduler):
     fb.seek(0)
 
 def gen_vbuffer_scheduler():
-    fb_file = open('/dev/fb0', 'wb')
+    fb_file = open(fb_dev, 'wb')
 
     vbuffer_writer = sched.scheduler(time.time, time.sleep)
     vbuffer_writer.enter(1/60, 1, write_vbuffer, (fb_file, vbuffer_writer,))
