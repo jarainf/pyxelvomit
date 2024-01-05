@@ -53,7 +53,7 @@ def handle_client(connection, address):
                     coordinates = (int(data_split[1]) + offset_y, int(data_split[0]) + offset_x)
                     if coordinates[0] < height and coordinates[1] < width:
                         if data_split[2]:
-                            vbuffer[coordinates] = int(data_split[2].rjust(6,'0')[:6], 16) << 8
+                            vbuffer[coordinates] = int(data_split[2].rjust(6,'0')[:6], 16)
                         else:
                             connection.sendall(f'PX {data_split[0]} {data_split[1]} {vbuffer[data_split[0], data_split[1]]}')
 
