@@ -14,6 +14,7 @@ framerate = 60
 fb_dev = '/dev/fb0'
 byteswap = False
 invert = False
+alpha = True
 
 vbuffer = np.zeros((height, width), dtype=np.uint32)
 
@@ -54,7 +55,15 @@ def handle_client(connection, address):
                     coordinates = (int(data_split[1]) + offset_y, int(data_split[0]) + offset_x)
                     if coordinates[0] < height and coordinates[1] < width:
                         if data_split[2]:
-                            vbuffer[coordinates] = int(data_split[2].rjust(6,'0')[:6], 16)
+                            if alpha and len(data_split[2]) == 8:
+                                alpha_value = int(data_split[2][-2:], 16)
+                                cur = bin(vbuffer[coordinates])[2:].rjust(32,'0')
+                                r = int(alpha_value * int(data_split[2].rjust(6, '0')[0:2], 16) + int(cur[0:8],2) * (1 - alpha_value))
+                                g = int(alpha_value * int(data_split[2].rjust(6, '0')[2:4], 16) + int(cur[8:16],2) * (1 - alpha_value))
+                                b = int(alpha_value * int(data_split[2].rjust(6, '0')[4:6], 16) + int(cur[16:24],2) * (1 - alpha_value))
+                                vbuffer[coordinates] = (r << 16) + (g << 8) + b
+                            else:
+                                vbuffer[coordinates] = int(data_split[2].rjust(6,'0')[:6], 16)
                         else:
                             connection.sendall(f'PX {data_split[0]} {data_split[1]} {vbuffer[data_split[0], data_split[1]]}')
 
