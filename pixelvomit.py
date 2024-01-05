@@ -19,6 +19,7 @@ keep_screen = True
 ipv6 = True
 ipv6_only = False
 port = 42024
+grab_size = 2048
 
 # grab screen, make a copy since numpy doesn't create a writeable array
 if keep_screen:
@@ -31,14 +32,14 @@ else:
 
 # handle socket traffic with a generator
 def handle_buffer(connection):
-    buffer = connection.recv(4096).decode('ascii')
+    buffer = connection.recv(grab_size).decode('ascii')
     buffering = True
     while buffering:
         if '\n' in buffer:
             (line, buffer) = buffer.split('\n', 1)
             yield line + '\n'
         else:
-            rest = connection.recv(4096).decode('ascii')
+            rest = connection.recv(grab_size).decode('ascii')
             if not rest:
                 buffering = False
             else:
