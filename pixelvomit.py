@@ -16,6 +16,9 @@ byteswap = False
 invert = False
 alpha = True
 keep_screen = True
+ipv6 = True
+ipv6_only = False
+port = 42024
 
 if keep_screen:
     with open('/dev/fb0', 'rb') as fb:
@@ -94,8 +97,14 @@ def gen_vbuffer_scheduler():
     vbuffer_writer.enter(1/framerate, 1, write_vbuffer, (fb_file, vbuffer_writer,))
     vbuffer_writer.run()
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind(('0.0.0.0', 42024))
+bind_address = ('', port)
+if ipv6 and socket.has_dualstack_ipv6():
+    if ipv6_only:
+        s = socket.create_server(bind_address, family=socket.AF_INET6)
+    else:
+        s = socket.create_server(bind_address, family=socket.AF_INET6, dualstack_ipv6=True)
+else:
+    s = socket.create_server(bind_address, family=socket.AF_INET)
 s.listen()
 
 threads = list()
