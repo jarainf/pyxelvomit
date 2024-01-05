@@ -35,6 +35,8 @@ def handle_client(connection, address):
             if not data:
                 break
             data_split = data.split()
+            if data_split[0] == 'SIZE':
+                connection.sendall('SIZE {} {}'.format(width, height)
             if data_split[0] == 'PX':
                 if data_split[1].isnumeric() and data_split[2].isnumeric():
                     if int(data_split[1]) < 1280 and int(data_split[2]) < 800:
@@ -43,7 +45,9 @@ def handle_client(connection, address):
                             vbuffer[int(data_split[2]) * width * bpp + int(data_split[1]) * bpp] = int(data_split[3][4:6], 16)
                             vbuffer[int(data_split[2]) * width * bpp + int(data_split[1]) * bpp + 1] = int(data_split[3][2:4], 16)
                             vbuffer[int(data_split[2]) * width * bpp + int(data_split[1]) * bpp + 2] = int(data_split[3][0:2], 16)
-                            vbuffer[int(data_split[2]) * width * bpp + int(data_split[1]) * bpp + 3] = int('FF', 16)
+                            #vbuffer[int(data_split[2]) * width * bpp + int(data_split[1]) * bpp + 3] = int('FF', 16)
+                        else:
+                            connection.sendall('PX {} {} {}'.format(data_split[1], data_split[2], vbuffer[int(data_split[2]) * width * bpp + int(data_split[1]):int(data_split[2]) * width * bpp + int(data_split[1]) + 2]))
 
 
 
