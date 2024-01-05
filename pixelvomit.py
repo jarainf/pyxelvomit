@@ -30,28 +30,35 @@ def handle_buffer(connection):
         yield buffer
 
 def handle_client(connection, address):
+    offset_x = 0
+    offset_y = 0
     while True:
         for data in handle_buffer(connection):
             if not data:
                 break
+
             data_split = data.split()
+
+            if data_split[0] == 'OFFSET':
+                if data_split[1].isnumeric() and data_split[2].isnumeric():
+                    if int(data_split[1]) < width - 1 and int(data_split[2]) < height - 1:
+                        offset_x = int(data_split[1])
+                        offset_y = int(data_split[2])
+
             if data_split[0] == 'SIZE':
-                connection.sendall('SIZE {} {}'.format(width, height)
+                connection.sendall('SIZE {} {}'.format(width, height))
+
             if data_split[0] == 'PX':
                 if data_split[1].isnumeric() and data_split[2].isnumeric():
-                    if int(data_split[1]) < 1280 and int(data_split[2]) < 800:
+                    if int(data_split[1]) < width and int(data_split[2]) < height:
                         if data_split[3]:
                             data_split[3]=str(data_split[3]).rjust(6,'0')
-                            vbuffer[int(data_split[2]) * width * bpp + int(data_split[1]) * bpp] = int(data_split[3][4:6], 16)
-                            vbuffer[int(data_split[2]) * width * bpp + int(data_split[1]) * bpp + 1] = int(data_split[3][2:4], 16)
-                            vbuffer[int(data_split[2]) * width * bpp + int(data_split[1]) * bpp + 2] = int(data_split[3][0:2], 16)
+                            vbuffer[int(data_split[2]) * width * bpp + int(data_split[1]) * bpp + offset_x * bpp + offset_y * width * bpp] = int(data_split[3][4:6], 16)
+                            vbuffer[int(data_split[2]) * width * bpp + int(data_split[1]) * bpp + offset_x * bpp + offset_y * width * bpp + 1] = int(data_split[3][2:4], 16)
+                            vbuffer[int(data_split[2]) * width * bpp + int(data_split[1]) * bpp + offset_x * bpp + offset_y * width * bpp + 2] = int(data_split[3][0:2], 16)
                             #vbuffer[int(data_split[2]) * width * bpp + int(data_split[1]) * bpp + 3] = int('FF', 16)
                         else:
                             connection.sendall('PX {} {} {}'.format(data_split[1], data_split[2], vbuffer[int(data_split[2]) * width * bpp + int(data_split[1]):int(data_split[2]) * width * bpp + int(data_split[1]) + 2]))
-
-
-
-
 
 def write_vbuffer(fb, scheduler):
     scheduler.enter(1/60, 1, write_vbuffer, (fb, scheduler,))
@@ -65,8 +72,8 @@ def gen_vbuffer_scheduler():
     vbuffer_writer.enter(1/60, 1, write_vbuffer, (fb_file, vbuffer_writer,))
     vbuffer_writer.run()
 
-s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-s.bind(('0.0.0.0',42024))
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind(('0.0.0.0', 42024))
 s.listen()
 
 threads = list()
