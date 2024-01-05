@@ -13,6 +13,7 @@ height = 800
 framerate = 60
 fb_dev = '/dev/fb0'
 byteswap = False
+invert = False
 
 vbuffer = np.zeros((height, width), dtype=np.uint32)
 
@@ -61,8 +62,13 @@ def write_vbuffer(fb, scheduler):
     scheduler.enter(1/framerate, 1, write_vbuffer, (fb, scheduler,))
     if byteswap:
         fb.write(vbuffer.byteswap().tobytes())
-    else:
-        fb.write(vbuffer.tobytes())
+        fb.seek(0)
+        return
+    if invert:
+        fb.write(np.invert(vbuffer))
+        fb.seek(0)
+        return
+    fb.write(vbuffer.tobytes())
     fb.seek(0)
 
 def gen_vbuffer_scheduler():
