@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
 import threading
-import subprocess
 import socket
 import numpy as np
 import sched
 import time
-import sys
 
 width = 1280
 height = 800
