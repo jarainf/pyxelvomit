@@ -15,8 +15,15 @@ fb_dev = '/dev/fb0'
 byteswap = False
 invert = False
 alpha = True
+keep_screen = True
 
-vbuffer = np.zeros((height, width), dtype=np.uint32)
+if keep_screen:
+    with open('/dev/fb0', 'rb') as fb:
+        vbuffer = np.copy(np.frombuffer(fb.read(),dtype=np.uint32))
+        vbuffer.shape = (800, 1280)
+        vbuffer.setflags(write = 1)
+else:
+    vbuffer = np.zeros((height, width), dtype=np.uint32)
 
 def handle_buffer(connection):
     buffer = connection.recv(4096).decode('ascii')
