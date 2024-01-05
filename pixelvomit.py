@@ -37,7 +37,7 @@ def handle_buffer(connection):
     while buffering:
         if '\n' in buffer:
             (line, buffer) = buffer.split('\n', 1)
-            yield line + '\n'
+            yield line
         else:
             rest = connection.recv(grab_size).decode('ascii')
             if not rest:
