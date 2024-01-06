@@ -75,7 +75,10 @@ def handle_client(connection, address):
                 # sanity check
                 #if data_split[0].isnumeric() and data_split[1].isnumeric():
                 # apply offset and parse coordinates
-                coordinates = (int(data_split[1]) + offset_y, int(data_split[0]) + offset_x)
+                if da_mode:
+                    coordinates = (int(data_split[1]) + offset_y) * width * bpp + (int(data_split[0]) + offset_x) * bpp
+                else:
+                    coordinates = (int(data_split[1]) + offset_y, int(data_split[0]) + offset_x)
                 # sanity check again
                 #if coordinates[0] < height and coordinates[1] < width:
                 # not a sanity check, but compliance with GET PX
@@ -85,11 +88,11 @@ def handle_client(connection, address):
                     if alpha and len(data_split[2]) > 6:
                         if da_mode:
                             alpha_value = int(data_split[2][-2:], 16)
-                            cur = bin(vbuffer[coordinates[0] * width * bpp + coordinates[1] * bpp:coordinates[0] * width * bpp + coordinates[1] * bpp + 4])[2:].rjust(32,'0')
+                            cur = bin(vbuffer[coordinates:coordinates + 3])[2:].rjust(24,'0')
                             r = int(alpha_value * int(data_split[2].rjust(6, '0')[0:2], 16) + int(cur[0:8],2) * (1 - alpha_value))
                             g = int(alpha_value * int(data_split[2].rjust(6, '0')[2:4], 16) + int(cur[8:16],2) * (1 - alpha_value))
                             b = int(alpha_value * int(data_split[2].rjust(6, '0')[4:6], 16) + int(cur[16:24],2) * (1 - alpha_value))
-                            vbuffer[coordinates[0] * width * bpp + coordinates[1] * bpp:coordinates[0] * width * bpp + coordinates[1] * bpp + 4] = (r << 16) + (g << 8) + b
+                            vbuffer[coordinates:coordinates + 3] = (r << 16) + (g << 8) + b
                         else:
                             alpha_value = int(data_split[2][-2:], 16)
                             cur = bin(vbuffer[coordinates])[2:].rjust(32,'0')
@@ -100,7 +103,7 @@ def handle_client(connection, address):
                     else:
                         # receive data.
                         if da_mode:
-                            vbuffer[coordinates[0] * width * bpp + coordinates[1] * bpp:coordinates[0] * width * bpp + coordinates[1] * bpp + 3] = bytes.fromhex(data_split[2].rjust(6,'0'))[::-1]
+                            vbuffer[coordinates:coordinates + 3] = bytes.fromhex(data_split[2].rjust(6,'0'))[::-1]
                         else:
                             vbuffer[coordinates] = int(data_split[2], 16)
                 else:
