@@ -103,7 +103,10 @@ def handle_client(connection, address):
                     else:
                         # receive data.
                         if da_mode:
-                            vbuffer[coordinates:coordinates + 3] = bytes.fromhex(data_split[2].rjust(6,'0'))[::-1]
+                            if len(data_split[2]) < 6:
+                                vbuffer[coordinates:coordinates + 3] = bytes.fromhex(data_split[2].rjust(6,'0'))[::-1]
+                            else:
+                                vbuffer[coordinates:coordinates + 3] = bytes.fromhex(data_split[2])[::-1]
                         else:
                             vbuffer[coordinates] = int(data_split[2], 16)
                 else:
