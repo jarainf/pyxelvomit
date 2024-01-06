@@ -5,9 +5,11 @@ import socket
 import numpy as np
 import sched
 import time
+import mmap
 
 width = 1280
 height = 800
+bpp = 4
 framerate = 60
 fb_dev = '/dev/fb0'
 byteswap = False
@@ -18,6 +20,7 @@ ipv6 = True
 ipv6_only = False
 port = 42024
 grab_size = 2048
+da_mode = True
 
 # grab screen, make a copy since numpy doesn't create a writeable array
 if keep_screen:
@@ -79,18 +82,32 @@ def handle_client(connection, address):
                 if data_split[2]:
                     # alpha blending, works but might not be correct.
                     # TODO: Optimise since it's horribly slow, probably.
-                    if alpha and len(data_split[2]) == 8:
-                        alpha_value = int(data_split[2][-2:], 16)
-                        cur = bin(vbuffer[coordinates])[2:].rjust(32,'0')
-                        r = int(alpha_value * int(data_split[2].rjust(6, '0')[0:2], 16) + int(cur[0:8],2) * (1 - alpha_value))
-                        g = int(alpha_value * int(data_split[2].rjust(6, '0')[2:4], 16) + int(cur[8:16],2) * (1 - alpha_value))
-                        b = int(alpha_value * int(data_split[2].rjust(6, '0')[4:6], 16) + int(cur[16:24],2) * (1 - alpha_value))
-                        vbuffer[coordinates] = (r << 16) + (g << 8) + b
+                    if alpha and len(data_split[2]) > 6:
+                        if da_mode:
+                            alpha_value = int(data_split[2][-2:], 16)
+                            cur = bin(vbuffer[coordinates[0] * width * bpp + coordinates[1] * bpp:coordinates[0] * width * bpp + coordinates[1] * bpp + 4])[2:].rjust(32,'0')
+                            r = int(alpha_value * int(data_split[2].rjust(6, '0')[0:2], 16) + int(cur[0:8],2) * (1 - alpha_value))
+                            g = int(alpha_value * int(data_split[2].rjust(6, '0')[2:4], 16) + int(cur[8:16],2) * (1 - alpha_value))
+                            b = int(alpha_value * int(data_split[2].rjust(6, '0')[4:6], 16) + int(cur[16:24],2) * (1 - alpha_value))
+                            vbuffer[coordinates[0] * width * bpp + coordinates[1] * bpp:coordinates[0] * width * bpp + coordinates[1] * bpp + 4] = (r << 16) + (g << 8) + b
+                        else:
+                            alpha_value = int(data_split[2][-2:], 16)
+                            cur = bin(vbuffer[coordinates])[2:].rjust(32,'0')
+                            r = int(alpha_value * int(data_split[2].rjust(6, '0')[0:2], 16) + int(cur[0:8],2) * (1 - alpha_value))
+                            g = int(alpha_value * int(data_split[2].rjust(6, '0')[2:4], 16) + int(cur[8:16],2) * (1 - alpha_value))
+                            b = int(alpha_value * int(data_split[2].rjust(6, '0')[4:6], 16) + int(cur[16:24],2) * (1 - alpha_value))
+                            vbuffer[coordinates] = (r << 16) + (g << 8) + b
                     else:
                         # receive data.
-                        vbuffer[coordinates] = int(data_split[2].rjust(6,'0'), 16)
+                        if da_mode:
+                            vbuffer[coordinates[0] * width * bpp + coordinates[1] * bpp:coordinates[0] * width * bpp + coordinates[1] * bpp + 3] = bytes.fromhex(data_split[2].rjust(6,'0'))[::-1]
+                        else:
+                            vbuffer[coordinates] = int(data_split[2], 16)
                 else:
-                    connection.sendall(f'PX {data_split[0]} {data_split[1]} {vbuffer[data_split[0], data_split[1]]}')
+                    if da_mode:
+                        connection.sendall(f'PX {data_split[0]} {data_split[1]} {vbuffer[coordinates[0] * width * bpp + coordinates[1] * bpp:coordinates[0] * width * bpp + coordinates[1] * bpp + 6]}')
+                    else:
+                        connection.sendall(f'PX {data_split[0]} {data_split[1]} {vbuffer[coordinates]}')
 
 def write_vbuffer(fb, scheduler):
     scheduler.enter(1/framerate, 1, write_vbuffer, (fb, scheduler,))
@@ -124,9 +141,15 @@ s.listen()
 
 threads = list()
 
-x = threading.Thread(target=gen_vbuffer_scheduler, daemon=True)
-threads.append(x)
-x.start()
+# If we're not in direct access mode
+if not da_mode:
+    x = threading.Thread(target=gen_vbuffer_scheduler, daemon=True)
+    threads.append(x)
+    x.start()
+else:
+    # Direct access mode. preferably with mmap. np.memmap performs worse.
+    fb_file = open('/dev/fb0', 'wb+')
+    vbuffer = mmap.mmap(fb_file.fileno(), length=1280*800*4)
 
 while True:
     conn, addr = s.accept()
