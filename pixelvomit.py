@@ -117,9 +117,9 @@ def handle_client(connection, address):
                                 case 1:
                                     vbuffer[coordinates:coordinates + 3] = bytes.fromhex(f'0{data_split[2]}0000')
                                 case 7:
-                                    vbuffer[coordinates:coordinates + 1] = bytes.fromhex(data_split[2][:-1])[::-1]
+                                    vbuffer[coordinates:coordinates + 3] = bytes.fromhex(data_split[2][:-1])[::-1]
                                 case _:
-                                    vbuffer[coordinates:coordinates + 4] = bytes.fromhex(data_split[2])[::-1]
+                                    vbuffer[coordinates:coordinates + 3] = bytes.fromhex(data_split[2][:-2])[::-1]
                         else:
                             vbuffer[coordinates] = int(data_split[2], 16)
                 else:
