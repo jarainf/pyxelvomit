@@ -7,6 +7,8 @@ import sched
 import time
 import mmap
 
+# config
+
 width = 1280
 height = 800
 bpp = 4
@@ -26,7 +28,7 @@ da_mode = True
 if keep_screen:
     with open('/dev/fb0', 'rb') as fb:
         vbuffer = np.copy(np.frombuffer(fb.read(),dtype=np.uint32))
-        vbuffer.shape = (800, 1280)
+        vbuffer.shape = (height, width)
         vbuffer.setflags(write = 1)
 else:
     vbuffer = np.zeros((height, width), dtype=np.uint32)
